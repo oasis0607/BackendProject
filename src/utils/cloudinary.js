@@ -1,4 +1,4 @@
-import { v2 } from "cloudinary";
+import { v2 as cloudinary} from "cloudinary";
 import fs from 'fs'
 import dotenv from 'dotenv'
 import { response } from "express";
@@ -30,11 +30,13 @@ const uploadOnCloudinary=async (localPath)=>{
        return null;
     }
 }
-cloudinary.v2.uploader
+cloudinary.uploader
 .upload("dog.mp4", {
   resource_type: "video", 
   public_id: "my_dog",
   overwrite: true, 
   notification_url: "https://mysite.example.com/notify_endpoint"})
 .then(result=>console.log(result));
+
+export {uploadOnCloudinary};
 
