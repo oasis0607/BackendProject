@@ -299,10 +299,77 @@ const updateCoverImage=wrapAsync(async(req,res)=>{
     .status(200)
     .json(new ApiResponse(200,user,"Cover image updated successfully"))
 });
+
+const getUserChannelProfile=wrapAsync(async(req,res)=>{
+    const {username}=req.params;
+
+    if(!username?.trim()){
+        throw new ApiError(400,"Username is required");
+    }
+
+    const channel=await User.aggregate([
+        {
+            $match:{
+                username:username.toLowerCase()
+            }
+        },
+        {   //lookup is used fro joinin collection
+            $lookup:{
+                from:"subscriptions",//models from data base
+                localField:"_id",
+                foreignField:"channel",
+                as:"subscribers"
+            }
+        },{
+            $lookup:{
+                from:"subscriptions",
+                localField:"_id",
+                foreignField:"subscriber",
+                as:"subscribedTo"
+            }
+        },
+        {   //$addfields fro adding new fields
+            $addFields:{
+                subscriberCount:{
+                    $size:"$subscibers",
+
+                },
+                channelSubscriberToCount:{
+                    $size:"$subscribedTo"
+                },
+                isSubcribed:{
+                    if:{$in:[req.user?._id,"$subscibers.subscriber"]},
+                    then:true,
+                    else:false
+                }
+            }
+        },
+        {   //project gives us selected number of fields
+            $project:{
+                fullname:1,
+                username:1,
+                subscriberCount:1,
+                channelSubscriberToCount:1,
+                isSubcribed:1,
+                avatar:1,
+                coverImage:1,
+                email:1,
+
+            }
+        }
+    ])
+
+    if(!channel?.length){
+        throw new ApiError(404,"Channel does not exist");
+    }
+    return res.status(200)
+    .json(new ApiResponse(200,channel[0],"Channel details fetched successfully"));
+})
 export {registerUser,loginUser,logoutUser,refreshAccessToken
     ,changeCurrentUserPassword
     ,getCurrentUser,
     updateAccountSettings,
     updateAvatar,
-    updateCoverImage
+    updateCoverImage,
+    getUserChannelProfile
 };
