@@ -1,42 +1,41 @@
-import { v2 as cloudinary} from "cloudinary";
-import fs from 'fs'
-import dotenv from 'dotenv'
-import { response } from "express";
+import { v2 as cloudinary } from "cloudinary";
+import fs from "fs";
+import dotenv from "dotenv";
 
 dotenv.config();
 
-cloudinary.config({ 
-  cloud_name: process.env.CLOUDINARY_CLOUD_NAME, 
-  api_key: process.env.CLOUDINARY_API_KEY, 
-  api_secret: process.env.CLOUDINARY_API_SECRET
+cloudinary.config({
+  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+  api_key: process.env.CLOUDINARY_API_KEY,
+  api_secret: process.env.CLOUDINARY_API_SECRET,
 });
 
+const uploadOnCloudinary = async (localPath) => {
+  try {
+    if (!localPath) return null;
 
-const uploadOnCloudinary=async (localPath)=>{
-    try{
-      if(!localPath) return null;
+    const result = await cloudinary.uploader.upload(localPath, {
+      resource_type: "auto", // ✅ fixed typo
+    });
 
-      //upload file on cloudinary
-      const response=await cloudinary.v2.uploader.upload(localPath,{
-        resourse_type:"auto",
-      })
-       console.log("file is uploaded on cloudinary",response.url);
-      return response;
-    }catch(err){
-       fs.unlinkSync(localPath);//remove the locally saved temporary
-       //file as the upload operation got failed
-       //if we keep this file it occupies server spacce and load
-       //also can store currupted files
-       return null;
+    console.log("File uploaded to Cloudinary:", result.url);
+
+    // cleanup local file after successful upload
+    if (fs.existsSync(localPath)) {
+      fs.unlinkSync(localPath);
     }
-}
-cloudinary.uploader
-.upload("dog.mp4", {
-  resource_type: "video", 
-  public_id: "my_dog",
-  overwrite: true, 
-  notification_url: "https://mysite.example.com/notify_endpoint"})
-.then(result=>console.log(result));
 
-export {uploadOnCloudinary};
+    return result;
+  } catch (error) {
+    console.error("Cloudinary upload error:", error);
 
+    // cleanup even if failed
+    if (fs.existsSync(localPath)) {
+      fs.unlinkSync(localPath);
+    }
+
+    return null;
+  }
+};
+
+export { uploadOnCloudinary };
